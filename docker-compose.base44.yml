@@ -8,7 +8,7 @@ services:
       git config --global --replace-all url.https://github.com/.insteadOf ssh://git@github.com/ &&
       git config --global --add url.https://github.com/.insteadOf git@github.com: &&
       npm install --omit=dev &&
-      node --watch src/server.js"
+      node --watch-path=src --watch src/server.js"
     ports:
       - "3000:3000"
     volumes:

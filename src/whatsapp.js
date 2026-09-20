@@ -7,9 +7,11 @@ const {
 
 const P = require("pino");
 const path = require("path");
+const QRCode = require("qrcode");
 
 let sock = null;
 let qrCode = null;
+let qrDataUrl = null;
 
 let status = {
   connected: false,
@@ -201,9 +203,20 @@ async function startWhatsApp() {
 
       if (qr) {
         qrCode = qr;
+        qrDataUrl = null;
 
         status.state = "waiting_qr";
         status.connected = false;
+
+        QRCode.toDataURL(qr, {
+          width: 400,
+          margin: 2,
+          errorCorrectionLevel: "H"
+        }).then((url) => {
+          qrDataUrl = url;
+        }).catch((err) => {
+          console.error("QR generation error:", err);
+        });
 
         console.log(
           "QR tersedia di web dashboard."
@@ -212,6 +225,7 @@ async function startWhatsApp() {
 
       if (connection === "open") {
         qrCode = null;
+        qrDataUrl = null;
 
         status.connected = true;
         status.state = "connected";
@@ -377,7 +391,7 @@ function getStatus() {
 }
 
 function getQRCode() {
-  return qrCode;
+  return qrDataUrl;
 }
 
 module.exports = {
