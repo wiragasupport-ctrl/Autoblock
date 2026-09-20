@@ -21,11 +21,14 @@ let status = {
 
 /*
  * Cache kontak yang diketahui oleh WhatsApp.
- *
- * Nomor yang tidak ada di cache = tidak dikenal = BLOKIR.
  * Hanya kontak dengan isMyContact = true yang aman.
+ *
+ * chattedJids: nomor yang pernah dichat sebelumnya
+ * (disinkron saat bot terhubung via chats.upsert).
+ * Nomor di sini TIDAK diblokir meski tidak disimpan.
  */
 const contacts = new Map();
+const chattedJids = new Set();
 
 function normalizeJid(jid) {
   if (!jid) return null;
@@ -55,15 +58,24 @@ function isKnownContact(jid) {
    */
   const contact = contacts.get(normalized);
 
-  if (!contact) {
-    /*
-     * Nomor tidak ada di cache kontak.
-     * = tidak dikenal = BLOKIR.
-     */
-    return false;
+  /*
+   * Nomor disimpan di kontak telepon = AMAN.
+   */
+  if (contact && contact.isMyContact === true) {
+    return true;
   }
 
-  return contact.isMyContact === true;
+  /*
+   * Pernah dichat sebelumnya = AMAN.
+   */
+  if (chattedJids.has(normalized)) {
+    return true;
+  }
+
+  /*
+   * Tidak disimpan DAN belum pernah dichat = BLOKIR.
+   */
+  return false;
 }
 
 async function blockNumber(jid) {
@@ -328,11 +340,36 @@ async function startWhatsApp() {
   );
 
   /*
+   * CHAT HISTORY SYNC
+   * Saat bot terhubung, WhatsApp mengirim daftar
+   * chat yang sudah ada. Kita catat semua JID
+   * yang pernah dichat agar tidak diblokir.
+   */
+  sock.ev.on(
+    "chats.upsert",
+    (chats) => {
+      for (const chat of chats) {
+        if (!chat.id) continue;
+
+        const jid = normalizeJid(chat.id);
+
+        if (isPrivateUserJid(jid)) {
+          chattedJids.add(jid);
+        }
+      }
+    }
+  );
+
+  /*
    * PESAN MASUK
+   * type "notify" = pesan baru real-time.
+   * type "append" = pesan dari history sync (diabaikan).
    */
   sock.ev.on(
     "messages.upsert",
-    async ({ messages }) => {
+    async ({ messages, type }) => {
+      if (type !== "notify") return;
+
       for (const message of messages) {
         try {
           await processIncomingMessage(
