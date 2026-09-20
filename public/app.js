@@ -83,21 +83,10 @@ async function updateQR() {
     ) {
 
       /*
-       * QR dibuat di browser.
-       * Tidak disimpan sebagai file.
+       * QR dikirim server sebagai data URL.
        */
 
-      const qrResponse =
-        await fetch(
-          "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" +
-          encodeURIComponent(data.qr)
-        );
-
-      const blob =
-        await qrResponse.blob();
-
-      qrImage.src =
-        URL.createObjectURL(blob);
+      qrImage.src = data.qr;
 
       qrContainer.classList.remove(
         "hidden"

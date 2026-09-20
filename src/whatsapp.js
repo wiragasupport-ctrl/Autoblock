@@ -7,9 +7,11 @@ const {
 
 const P = require("pino");
 const path = require("path");
+const QRCode = require("qrcode");
 
 let sock = null;
 let qrCode = null;
+let qrDataUrl = null;
 
 let status = {
   connected: false,
@@ -19,12 +21,14 @@ let status = {
 
 /*
  * Cache kontak yang diketahui oleh WhatsApp.
+ * Hanya kontak dengan isMyContact = true yang aman.
  *
- * Prinsip fail-safe:
- * Kalau nomor tidak diketahui statusnya,
- * JANGAN blokir.
+ * chattedJids: nomor yang pernah dichat sebelumnya
+ * (disinkron saat bot terhubung via chats.upsert).
+ * Nomor di sini TIDAK diblokir meski tidak disimpan.
  */
 const contacts = new Map();
+const chattedJids = new Set();
 
 function normalizeJid(jid) {
   if (!jid) return null;
@@ -54,15 +58,24 @@ function isKnownContact(jid) {
    */
   const contact = contacts.get(normalized);
 
-  if (!contact) {
-    /*
-     * Fail-safe:
-     * tidak tahu status kontak = jangan block.
-     */
+  /*
+   * Nomor disimpan di kontak telepon = AMAN.
+   */
+  if (contact && contact.isMyContact === true) {
     return true;
   }
 
-  return contact.isMyContact === true;
+  /*
+   * Pernah dichat sebelumnya = AMAN.
+   */
+  if (chattedJids.has(normalized)) {
+    return true;
+  }
+
+  /*
+   * Tidak disimpan DAN belum pernah dichat = BLOKIR.
+   */
+  return false;
 }
 
 async function blockNumber(jid) {
@@ -201,9 +214,20 @@ async function startWhatsApp() {
 
       if (qr) {
         qrCode = qr;
+        qrDataUrl = null;
 
         status.state = "waiting_qr";
         status.connected = false;
+
+        QRCode.toDataURL(qr, {
+          width: 400,
+          margin: 2,
+          errorCorrectionLevel: "H"
+        }).then((url) => {
+          qrDataUrl = url;
+        }).catch((err) => {
+          console.error("QR generation error:", err);
+        });
 
         console.log(
           "QR tersedia di web dashboard."
@@ -212,6 +236,7 @@ async function startWhatsApp() {
 
       if (connection === "open") {
         qrCode = null;
+        qrDataUrl = null;
 
         status.connected = true;
         status.state = "connected";
@@ -315,11 +340,36 @@ async function startWhatsApp() {
   );
 
   /*
+   * CHAT HISTORY SYNC
+   * Saat bot terhubung, WhatsApp mengirim daftar
+   * chat yang sudah ada. Kita catat semua JID
+   * yang pernah dichat agar tidak diblokir.
+   */
+  sock.ev.on(
+    "chats.upsert",
+    (chats) => {
+      for (const chat of chats) {
+        if (!chat.id) continue;
+
+        const jid = normalizeJid(chat.id);
+
+        if (isPrivateUserJid(jid)) {
+          chattedJids.add(jid);
+        }
+      }
+    }
+  );
+
+  /*
    * PESAN MASUK
+   * type "notify" = pesan baru real-time.
+   * type "append" = pesan dari history sync (diabaikan).
    */
   sock.ev.on(
     "messages.upsert",
-    async ({ messages }) => {
+    async ({ messages, type }) => {
+      if (type !== "notify") return;
+
       for (const message of messages) {
         try {
           await processIncomingMessage(
@@ -377,7 +427,7 @@ function getStatus() {
 }
 
 function getQRCode() {
-  return qrCode;
+  return qrDataUrl;
 }
 
 module.exports = {
