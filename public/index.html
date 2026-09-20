@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>WA Auto Block</title>
+
+  <link
+    rel="stylesheet"
+    href="/style.css"
+  >
+</head>
+
+<body>
+
+  <main class="container">
+
+    <section class="card">
+
+      <h1>WA Auto Block</h1>
+
+      <p class="description">
+        Pemblokir otomatis nomor WhatsApp
+        yang tidak dikenal.
+      </p>
+
+      <div
+        id="status"
+        class="status"
+      >
+        Menghubungkan...
+      </div>
+
+      <div
+        id="number"
+        class="number"
+      ></div>
+
+      <div
+        id="qr-container"
+        class="qr-container"
+      >
+        <p>
+          Scan QR ini menggunakan WhatsApp
+        </p>
+
+        <img
+          id="qr"
+          alt="WhatsApp QR Code"
+        >
+      </div>
+
+      <div
+        id="connected"
+        class="connected hidden"
+      >
+        WhatsApp berhasil terhubung.
+      </div>
+
+    </section>
+
+    <section class="card info">
+
+      <h2>Fungsi</h2>
+
+      <ul>
+        <li>Blokir nomor tidak dikenal</li>
+        <li>Tidak mengirim pesan</li>
+        <li>Tidak broadcast</li>
+        <li>Tidak memproses grup</li>
+        <li>Tidak memproses pesan sendiri</li>
+      </ul>
+
+    </section>
+
+  </main>
+
+  <script src="/app.js"></script>
+
+</body>
+  </html>
