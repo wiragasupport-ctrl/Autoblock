@@ -1,0 +1,23 @@
+services:
+  web:
+    image: node:20-slim
+    working_dir: /app
+    command: >
+      sh -c "apt-get update &&
+      apt-get install -y --no-install-recommends git openssh-client ca-certificates &&
+      git config --global --replace-all url.https://github.com/.insteadOf ssh://git@github.com/ &&
+      git config --global --add url.https://github.com/.insteadOf git@github.com: &&
+      npm install --omit=dev &&
+      node --watch src/server.js"
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - auth_data:/app/data/auth
+    environment:
+      - PORT=3000
+      - CHOKIDAR_USEPOLLING=true
+    restart: unless-stopped
+
+volumes:
+  auth_data:
