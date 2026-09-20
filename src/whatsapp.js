@@ -22,9 +22,8 @@ let status = {
 /*
  * Cache kontak yang diketahui oleh WhatsApp.
  *
- * Prinsip fail-safe:
- * Kalau nomor tidak diketahui statusnya,
- * JANGAN blokir.
+ * Nomor yang tidak ada di cache = tidak dikenal = BLOKIR.
+ * Hanya kontak dengan isMyContact = true yang aman.
  */
 const contacts = new Map();
 
@@ -58,10 +57,10 @@ function isKnownContact(jid) {
 
   if (!contact) {
     /*
-     * Fail-safe:
-     * tidak tahu status kontak = jangan block.
+     * Nomor tidak ada di cache kontak.
+     * = tidak dikenal = BLOKIR.
      */
-    return true;
+    return false;
   }
 
   return contact.isMyContact === true;
